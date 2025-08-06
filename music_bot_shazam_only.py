@@ -36,14 +36,14 @@ class ShazamMusicBot:
 Here's what I can do for you:
 
 🔎🎵 **Recognize track** - Send me an audio file and I'll identify the song
-👨‍🎤 **About artist** - /artist <artist_name>
-🎵📄 **About track** - /track <artist> - <song>
-🔎👨‍🎤 **Search artists** - /search_artist <name>
-🔎🎶 **Search tracks** - /search_track <query>
-🔝🎶👨‍🎤 **Top artist tracks** - /top_artist <artist_name>
-🔝🎶🌏 **Top tracks worldwide** - /top_world
-🔝🎶🌏🎸 **Top tracks by genre** - /top_genre <genre>
-🎶💬 **Similar songs** - /similar <artist> - <song>
+👨‍🎤 **About artist** - /artist \\<artist\\_name\\>
+🎵📄 **About track** - /track \\<artist\\> - \\<song\\>
+🔎👨‍🎤 **Search artists** - /search\\_artist \\<name\\>
+🔎🎶 **Search tracks** - /search\\_track \\<query\\>
+🔝🎶👨‍🎤 **Top artist tracks** - /top\\_artist \\<artist\\_name\\>
+🔝🎶🌏 **Top tracks worldwide** - /top\\_world
+🔝🎶🌏🎸 **Top tracks by genre** - /top\\_genre \\<genre\\>
+🎶💬 **Similar songs** - /similar \\<artist\\> - \\<song\\>
 🎵📊 **Track charts** - /charts
 
 **🎧 Send me an audio file to start recognizing music!**
@@ -724,8 +724,8 @@ Here's what I can do for you:
                         await query.edit_message_text("❌ An error occurred while fetching track information from Shazam.")
                 
         except Exception as e:
-            logger.error(f"Button callback error: {e}")
-            await query.edit_message_text("❌ An error occurred while processing your request.")
+                          logger.error(f"Button callback error: {e}")
+              await query.edit_message_text("❌ An error occurred while processing your request.")
 
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Help command handler"""
@@ -734,18 +734,18 @@ Here's what I can do for you:
 
 **🔎 Recognition & Info:**
 • Send audio file - Recognize track automatically
-• `/artist <name>` - Get artist information
-• `/track <artist> - <song>` - Get track details
+• `/artist \\<name\\>` - Get artist information
+• `/track \\<artist\\> - \\<song\\>` - Get track details
 
 **🔍 Search:**
-• `/search_artist <name>` - Search for artists
-• `/search_track <query>` - Search for tracks
-• `/similar <artist> - <song>` - Find similar songs
+• `/search_artist \\<name\\>` - Search for artists
+• `/search_track \\<query\\>` - Search for tracks
+• `/similar \\<artist\\> - \\<song\\>` - Find similar songs
 
 **📊 Charts (Shazam Data):**
-• `/top_artist <name>` - Top tracks by artist
+• `/top_artist \\<name\\>` - Top tracks by artist
 • `/top_world` - Global top tracks
-• `/top_genre <genre>` - Top tracks by genre
+• `/top_genre \\<genre\\>` - Top tracks by genre
 • `/charts` - Show available chart options
 
 **ℹ️ Other:**
