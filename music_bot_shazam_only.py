@@ -724,8 +724,8 @@ Here's what I can do for you:
                         await query.edit_message_text("❌ An error occurred while fetching track information from Shazam.")
                 
         except Exception as e:
-                          logger.error(f"Button callback error: {e}")
-              await query.edit_message_text("❌ An error occurred while processing your request.")
+            logger.error(f"Button callback error: {e}")
+            await query.edit_message_text("❌ An error occurred while processing your request.")
 
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Help command handler"""
