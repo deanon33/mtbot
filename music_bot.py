@@ -881,31 +881,218 @@ Send me an audio file to start recognizing music! 🎧
         try:
             if data.startswith("artist_"):
                 artist_name = data[7:]
-                # Simulate artist info command
-                context.args = artist_name.split()
-                await self.get_artist_info(update, context)
+                await query.edit_message_text(f"🔍 Getting information about {artist_name}...")
+                
+                # Get artist info
+                try:
+                    artists = await self.shazam.search_artist(artist_name)
+                    
+                    if not artists or 'artists' not in artists or not artists['artists']['hits']:
+                        await query.edit_message_text(f"❌ Sorry, I couldn't find information about '{artist_name}'")
+                        return
+
+                    artist_data = artists['artists']['hits'][0]['artist']
+                    
+                    response = f"👨‍🎤 **Artist Information**\n\n"
+                    response += f"🎵 **Name:** {artist_data.get('name', 'Unknown')}\n"
+                    
+                    if 'avatar' in artist_data:
+                        response += f"🖼️ **Avatar:** Available\n"
+                    
+                    # Get additional info from Last.fm if available
+                    if self.lastfm_network:
+                        try:
+                            lastfm_artist = self.lastfm_network.get_artist(artist_name)
+                            bio = lastfm_artist.get_bio_summary()
+                            if bio:
+                                response += f"\n📖 **Biography:**\n{bio[:500]}...\n"
+                            
+                            listeners = lastfm_artist.get_listener_count()
+                            if listeners:
+                                response += f"👥 **Listeners:** {listeners:,}\n"
+                                
+                            playcount = lastfm_artist.get_playcount()
+                            if playcount:
+                                response += f"▶️ **Total Plays:** {playcount:,}\n"
+                                
+                        except Exception as e:
+                            logger.error(f"Last.fm artist error: {e}")
+
+                    await query.edit_message_text(response, parse_mode=ParseMode.MARKDOWN)
+                    
+                except Exception as e:
+                    logger.error(f"Artist info error: {e}")
+                    await query.edit_message_text("❌ An error occurred while fetching artist information.")
                 
             elif data.startswith("track_"):
                 parts = data[6:].split("_", 1)
                 if len(parts) == 2:
                     artist, track = parts
-                    # Simulate track info command
-                    context.args = f"{artist} - {track}".split()
-                    await self.get_track_info(update, context)
+                    await query.edit_message_text(f"🔍 Getting information about '{track}' by {artist}...")
+                    
+                    try:
+                        search_results = await self.shazam.search_track(f"{artist} {track}")
+                        
+                        response = f"🎵 **Track Information**\n\n"
+                        response += f"🎼 **Title:** {track}\n"
+                        response += f"👨‍🎤 **Artist:** {artist}\n"
+
+                        if search_results and 'tracks' in search_results and search_results['tracks']['hits']:
+                            track_data = search_results['tracks']['hits'][0]['track']
+                            
+                            if 'sections' in track_data:
+                                for section in track_data['sections']:
+                                    if section.get('type') == 'SONG':
+                                        metadata = section.get('metadata', [])
+                                        for meta in metadata:
+                                            if meta.get('title') == 'Album':
+                                                response += f"💿 **Album:** {meta.get('text', 'Unknown')}\n"
+                                            elif meta.get('title') == 'Released':
+                                                response += f"📅 **Released:** {meta.get('text', 'Unknown')}\n"
+                                            elif meta.get('title') == 'Genre':
+                                                response += f"🎸 **Genre:** {meta.get('text', 'Unknown')}\n"
+
+                        # Get additional info from Last.fm if available
+                        if self.lastfm_network:
+                            try:
+                                lastfm_track = self.lastfm_network.get_track(artist, track)
+                                
+                                duration = lastfm_track.get_duration()
+                                if duration:
+                                    minutes = duration // 60000
+                                    seconds = (duration % 60000) // 1000
+                                    response += f"⏱️ **Duration:** {minutes}:{seconds:02d}\n"
+                                
+                                playcount = lastfm_track.get_playcount()
+                                if playcount:
+                                    response += f"▶️ **Play Count:** {playcount:,}\n"
+                                    
+                                listeners = lastfm_track.get_listener_count()
+                                if listeners:
+                                    response += f"👥 **Listeners:** {listeners:,}\n"
+                                    
+                            except Exception as e:
+                                logger.error(f"Last.fm track error: {e}")
+
+                        await query.edit_message_text(response, parse_mode=ParseMode.MARKDOWN)
+                        
+                    except Exception as e:
+                        logger.error(f"Track info error: {e}")
+                        await query.edit_message_text("❌ An error occurred while fetching track information.")
                     
             elif data.startswith("similar_"):
                 parts = data[8:].split("_", 1)
                 if len(parts) == 2:
                     artist, track = parts
-                    # Simulate similar songs command
-                    context.args = f"{artist} - {track}".split()
-                    await self.get_similar_songs(update, context)
+                    await query.edit_message_text(f"🔍 Finding songs similar to '{track}' by {artist}...")
+                    
+                    try:
+                        response = f"🎶💬 **Similar Songs**\n\n"
+                        response += f"Based on: {track} by {artist}\n\n"
+
+                        similar_found = False
+
+                        # Get similar tracks from Last.fm
+                        if self.lastfm_network:
+                            try:
+                                lastfm_track = self.lastfm_network.get_track(artist, track)
+                                similar_tracks = lastfm_track.get_similar(limit=10)
+                                
+                                if similar_tracks:
+                                    for i, similar_track in enumerate(similar_tracks[:5], 1):
+                                        similarity = similar_track.match * 100
+                                        response += f"{i}. 🎵 **{similar_track.item.title}**\n"
+                                        response += f"   👨‍🎤 by {similar_track.item.artist}\n"
+                                        response += f"   📊 Similarity: {similarity:.1f}%\n\n"
+                                    similar_found = True
+                                    
+                            except Exception as e:
+                                logger.error(f"Last.fm similar error: {e}")
+
+                        # Try Spotify recommendations if available
+                        if self.spotify and not similar_found:
+                            try:
+                                # Search for the track on Spotify
+                                results = self.spotify.search(q=f"artist:{artist} track:{track}", type='track', limit=1)
+                                if results['tracks']['items']:
+                                    track_id = results['tracks']['items'][0]['id']
+                                    
+                                    # Get recommendations
+                                    recommendations = self.spotify.recommendations(seed_tracks=[track_id], limit=5)
+                                    
+                                    for i, rec_track in enumerate(recommendations['tracks'], 1):
+                                        artists = ', '.join([artist['name'] for artist in rec_track['artists']])
+                                        response += f"{i}. 🎵 **{rec_track['name']}**\n"
+                                        response += f"   👨‍🎤 by {artists}\n"
+                                        response += f"   💿 Album: {rec_track['album']['name']}\n\n"
+                                    similar_found = True
+                                    
+                            except Exception as e:
+                                logger.error(f"Spotify recommendations error: {e}")
+
+                        if not similar_found:
+                            response += "❌ Unable to find similar songs. Try checking the artist and track name."
+
+                        await query.edit_message_text(response, parse_mode=ParseMode.MARKDOWN)
+                        
+                    except Exception as e:
+                        logger.error(f"Similar songs error: {e}")
+                        await query.edit_message_text("❌ An error occurred while finding similar songs.")
                     
             elif data.startswith("top_artist_"):
                 artist_name = data[11:]
-                # Simulate top artist tracks command
-                context.args = artist_name.split()
-                await self.get_top_artist_tracks(update, context)
+                await query.edit_message_text(f"🔍 Getting top tracks for {artist_name}...")
+                
+                try:
+                    response = f"🔝🎶👨‍🎤 **Top Tracks**\n\n"
+                    response += f"Artist: {artist_name}\n\n"
+
+                    tracks_found = False
+
+                    # Get top tracks from Last.fm
+                    if self.lastfm_network:
+                        try:
+                            lastfm_artist = self.lastfm_network.get_artist(artist_name)
+                            top_tracks = lastfm_artist.get_top_tracks(limit=10)
+                            
+                            if top_tracks:
+                                for i, track in enumerate(top_tracks[:5], 1):
+                                    playcount = track.item.get_playcount()
+                                    response += f"{i}. 🎵 **{track.item.title}**\n"
+                                    if playcount:
+                                        response += f"   ▶️ Plays: {playcount:,}\n"
+                                    response += "\n"
+                                tracks_found = True
+                                
+                        except Exception as e:
+                            logger.error(f"Last.fm top tracks error: {e}")
+
+                    # Try Spotify if Last.fm failed
+                    if self.spotify and not tracks_found:
+                        try:
+                            results = self.spotify.search(q=f"artist:{artist_name}", type='artist', limit=1)
+                            if results['artists']['items']:
+                                artist_id = results['artists']['items'][0]['id']
+                                top_tracks = self.spotify.artist_top_tracks(artist_id)
+                                
+                                for i, track in enumerate(top_tracks['tracks'][:5], 1):
+                                    popularity = track.get('popularity', 0)
+                                    response += f"{i}. 🎵 **{track['name']}**\n"
+                                    response += f"   📊 Popularity: {popularity}/100\n"
+                                    response += f"   💿 Album: {track['album']['name']}\n\n"
+                                tracks_found = True
+                                
+                        except Exception as e:
+                            logger.error(f"Spotify top tracks error: {e}")
+
+                    if not tracks_found:
+                        response += "❌ Unable to fetch top tracks. Please check the artist name."
+
+                    await query.edit_message_text(response, parse_mode=ParseMode.MARKDOWN)
+                    
+                except Exception as e:
+                    logger.error(f"Top artist tracks error: {e}")
+                    await query.edit_message_text("❌ An error occurred while fetching top tracks.")
                 
         except Exception as e:
             logger.error(f"Button callback error: {e}")
