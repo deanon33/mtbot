@@ -509,7 +509,11 @@ Here's what I can do for you:
 
         except Exception as e:
             logger.error(f"Top world tracks error: {e}")
-            await update.message.reply_text("❌ An error occurred while fetching global charts from Shazam.")
+            # Better error message for this specific issue
+            if "URL is invalid" in str(e):
+                await update.message.reply_text("🌐 **Global charts temporarily unavailable**\n\n❗ Shazam's worldwide charts endpoint is currently having issues. Please try:\n\n• `/top_country US` - US top tracks\n• `/top_country GB` - UK top tracks\n• `/top_genre rock` - Top rock tracks\n• `/search_track [song name]` - Search for specific songs\n\n🔄 Global charts should be back online soon!")
+            else:
+                await update.message.reply_text("❌ An error occurred while fetching global charts from Shazam.")
 
     async def button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle button callbacks"""
