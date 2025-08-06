@@ -425,12 +425,12 @@ Here's what I can do for you:
     async def get_top_world_genre_tracks(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Get top tracks by genre worldwide"""
         if not context.args:
-            await update.message.reply_text("Please provide a genre! Usage: /top\\_genre rock\n\nAvailable: ROCK, POP, HIP\\_HOP\\_RAP, DANCE, ELECTRONIC, ALTERNATIVE, COUNTRY, JAZZ")
+            await update.message.reply_text("Please provide a genre! Usage: /top\\_genre rock\n\nAvailable: ROCK, POP, HIP\\_HOP\\_RAP, DANCE, ELECTRONIC, ALTERNATIVE, COUNTRY")
             return
 
         genre_name = ' '.join(context.args).upper().replace(' ', '_').replace('-', '_')
         
-        # Map to GenreMusic enum
+        # Map to GenreMusic enum (based on ShazamIO documentation)
         genre_mapping = {
             'ROCK': GenreMusic.ROCK,
             'POP': GenreMusic.POP,
@@ -441,7 +441,6 @@ Here's what I can do for you:
             'ELECTRONIC': GenreMusic.ELECTRONIC,
             'ALTERNATIVE': GenreMusic.ALTERNATIVE,
             'COUNTRY': GenreMusic.COUNTRY,
-            'JAZZ': GenreMusic.JAZZ,
         }
 
         if genre_name not in genre_mapping:
