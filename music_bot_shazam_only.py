@@ -70,7 +70,9 @@ Here's what I can do for you:
                 file = await context.bot.get_file(update.message.video_note.file_id)
 
             # Download the file
-            file_path = f"/tmp/audio_{update.message.message_id}.ogg"
+            import tempfile
+            temp_dir = tempfile.gettempdir()
+            file_path = os.path.join(temp_dir, f"audio_{update.message.message_id}.ogg")
             await file.download_to_drive(file_path)
 
             # Recognize using Shazam
